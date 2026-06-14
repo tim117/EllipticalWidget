@@ -1,4 +1,4 @@
-// EllipticalTracker.js
+// EllipticalTracker.js (V3: 修正輸入框顯示問題)
 
 const fm = FileManager.iCloud();
 const dir = fm.documentsDirectory();
@@ -21,18 +21,18 @@ if (config.runsInApp) {
   let alert = new Alert();
   alert.title = "輸入今日橢圓機數據";
   
-  // 欄位設定
-  alert.addTextField("總時間 - 分鐘", "30");
-  alert.addTextField("總時間 - 秒數", "0");
-  alert.addTextField("動態大卡", "");
-  alert.addTextField("平均心率", "");
-  alert.addTextField("最高心率", "");
-  alert.addTextField("體重 (kg)", defaultWeight); 
-  alert.addTextField("Zone 1 時間 (分)", "0");
-  alert.addTextField("Zone 2 時間 (分)", "0");
-  alert.addTextField("Zone 3 時間 (分)", "0");
-  alert.addTextField("Zone 4 時間 (分)", "0");
-  alert.addTextField("Zone 5 時間 (分)", "0");
+  // 欄位設定 (移除預設文字，讓提示文字顯示出來)
+  alert.addTextField("1. 總時間 - 分鐘", "");
+  alert.addTextField("2. 總時間 - 秒數", "");
+  alert.addTextField("3. 動態大卡", "");
+  alert.addTextField("4. 平均心率", "");
+  alert.addTextField("5. 最高心率", "");
+  alert.addTextField(`6. 體重 (上次 ${defaultWeight}kg，不變免填)`, ""); 
+  alert.addTextField("7. Zone 1 時間 (分)", "");
+  alert.addTextField("8. Zone 2 時間 (分)", "");
+  alert.addTextField("9. Zone 3 時間 (分)", "");
+  alert.addTextField("10. Zone 4 時間 (分)", "");
+  alert.addTextField("11. Zone 5 時間 (分)", "");
   
   alert.addAction("儲存");
   alert.addCancelAction("取消");
@@ -44,10 +44,14 @@ if (config.runsInApp) {
     let sec = parseFloat(alert.textFieldValue(1) || 0);
     let time = min + (sec / 60); 
     
-    let activeCal = parseFloat(alert.textFieldValue(2));
-    let avgHR = parseFloat(alert.textFieldValue(3));
-    let maxHR = parseFloat(alert.textFieldValue(4));
-    let weight = parseFloat(alert.textFieldValue(5));
+    let activeCal = parseFloat(alert.textFieldValue(2) || 0);
+    let avgHR = parseFloat(alert.textFieldValue(3) || 0);
+    let maxHR = parseFloat(alert.textFieldValue(4) || 0);
+    
+    // 如果體重留白，就使用上次紀錄的體重
+    let weightInput = alert.textFieldValue(5);
+    let weight = parseFloat(weightInput ? weightInput : defaultWeight);
+    
     let z1 = parseFloat(alert.textFieldValue(6) || 0);
     let z2 = parseFloat(alert.textFieldValue(7) || 0);
     let z3 = parseFloat(alert.textFieldValue(8) || 0);
@@ -57,7 +61,8 @@ if (config.runsInApp) {
     // 計算
     let hrLoad = (z1 * 0.5) + (z2 * 1.2) + (z3 * 2.0) + (z4 * 3.0) + (z5 * 4.0);
     let timeInHours = time / 60;
-    let efficiency = activeCal / (weight * timeInHours); 
+    // 避免除以 0 的錯誤
+    let efficiency = (weight > 0 && timeInHours > 0) ? (activeCal / (weight * timeInHours)) : 0; 
     let totalScore = Math.round((hrLoad * 1.2) + (efficiency * 5));
     
     // 建立當次紀錄
@@ -124,6 +129,7 @@ if (history.length === 0) {
   
   let recentHistory = history.slice(-7);
   let maxScore = Math.max(...recentHistory.map(r => r.score));
+  if (maxScore === 0) maxScore = 1; // 防呆機制
   
   let chartStack = rightStack.addStack();
   chartStack.layoutHorizontally();
